@@ -2,6 +2,15 @@ from pydantic import BaseModel
 from pydantic.utils import GetterDict
 
 
+class RecipeListResponse(BaseModel):
+    id: int
+    name: str
+    description: str
+    
+    class Config:
+        orm_mode = True
+
+
 class RecipeStep(BaseModel):
     order: int
     description: str
@@ -32,8 +41,8 @@ class RecipeEntityResponse(BaseModel):
         getter_dict = RecipeIngridientGetter
 
 
-class CreateRecipeData(BaseModel):
+class FullRecipeData(BaseModel):
     name: str
     description: str
-    ingredients: list[str]
+    ingredients: set[str]
     steps: list[RecipeStep]
