@@ -52,7 +52,11 @@ class Ingredient(Base):
         primary_key=True,
         index=True,
     )
-    name: Mapped[str] = mapped_column(String(127), nullable=False)
+    name: Mapped[str] = mapped_column(
+        String(127),
+        nullable=False,
+        unique=True,
+    )
 
 
 class Step(Base):
