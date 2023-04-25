@@ -7,6 +7,10 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
+SQLAlchemy = {extras = ["asyncio"], version = "^2.0.10"}
+pydantic = {extras = ["dotenv"], version = "^1.10.7"}
+aiosqlite = "^0.19.0"
+alembic = "^1.10.4"
 
 
 [build-system]
