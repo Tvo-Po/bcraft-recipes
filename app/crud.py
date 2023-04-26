@@ -1,5 +1,6 @@
 from datetime import timedelta
 from typing import Any
+from uuid import UUID
 
 from sqlalchemy import case, delete, func, Result, select, Select
 from sqlalchemy.exc import IntegrityError
@@ -11,6 +12,7 @@ from .model import (
     Recipe,
     RecipeIngredientAssociation,
     Step,
+    RecipeRate,
 )
 
 
@@ -45,24 +47,46 @@ def filter_ingredients(ingredient_names: set[str]):
 def get_recipe_list_query(
     duration__lte: timedelta | None = None,
     duration__gte: timedelta | None = None,
+    rating__lte: float |  None = None,
+    rating__gte: float |  None = None,
     ingredient_names: set[str] | None = None,
-) -> Select[tuple[Recipe, timedelta]]:
+) -> Select[tuple[Recipe, timedelta, float]]:
     step_sq = select(
         Step.recipe_id,
         func.sum(Step.duration).label('total_duration'),
     ).group_by(Step.recipe_id).subquery()
+    rate_sq = select(
+        RecipeRate.recipe_id,
+        func.avg(RecipeRate.rate).label('rating'),
+    ).group_by(RecipeRate.recipe_id).subquery()
+    total_duration_column = func.coalesce(
+        step_sq.c.total_duration,
+        timedelta(seconds=0),
+    )
+    rating_column = func.coalesce(rate_sq.c.rating, 0)
     applied_filter = ConditionsCombiner().add(
         duration__lte and
-        step_sq.c.total_duration <= duration__lte
+        total_duration_column <= duration__lte
     ).add(
         duration__gte and
-        step_sq.c.total_duration >= duration__gte
+        total_duration_column >= duration__gte
     ).add(
         ingredient_names and
         Recipe.id.in_(filter_ingredients(ingredient_names))
+    ).add(
+        rating__lte and
+        rating_column <= rating__lte
+    ).add(
+        rating__gte and
+        rating_column >= rating__gte
     )
-    query = select(Recipe, step_sq.c.total_duration) \
+    query = select(
+                Recipe,
+                total_duration_column,
+                rating_column,
+            ) \
            .join(step_sq) \
+           .outerjoin(rate_sq) \
            .join(Recipe.ingredients) \
            .join(RecipeIngredientAssociation.ingredient) \
            .options(
@@ -143,4 +167,14 @@ async def delete_recipe(
     session: AsyncSession,
 ):
     await session.execute(delete(Recipe).filter_by(id=id))
+    await session.commit()
+
+
+async def rate_recipe(
+    recipe_id: int,
+    user_id: UUID,
+    rate: int,
+    session: AsyncSession,
+):
+    session.add(RecipeRate(recipe_id=recipe_id, user_id=user_id, rate=rate))
     await session.commit()

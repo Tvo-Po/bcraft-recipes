@@ -11,6 +11,27 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     pass
 
 
+class RecipeRate(Base):
+    __tablename__ = 'recipe_rate'
+    __table_args__ = (
+        Index(
+            'ix_user_rating_composite_pk',
+            'user_id',
+            'recipe_id',
+        ),
+    )
+    
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey('user.id', ondelete='CASCADE'),
+        primary_key=True,
+    )
+    recipe_id: Mapped[int] = mapped_column(
+        ForeignKey('recipe.id', ondelete='CASCADE'),
+        primary_key=True,
+    )
+    rate: Mapped[int] = mapped_column(nullable=False)
+
+
 class Recipe(Base):
     __tablename__ = 'recipe'
 
@@ -26,6 +47,9 @@ class Recipe(Base):
     )
     steps: Mapped[list['Step']] = relationship(
         back_populates='recipe',
+        cascade='all, delete-orphan',
+    )
+    rates: Mapped[list['RecipeRate']] = relationship(
         cascade='all, delete-orphan',
     )
 

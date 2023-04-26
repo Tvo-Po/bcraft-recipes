@@ -6,16 +6,19 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy.ext.asyncio import AsyncSession
 
+
 from . import crud
 from .auth import auth_backend, fastapi_users, current_active_user
 from .db import get_session
 from .schema import (
     FullRecipeData,
+    RateData,
     RecipeEntityResponse,
     RecipeListResponse,
     UserCreate,
     UserRead,
 )
+from .model import User
 
 
 router = APIRouter(prefix='/api/v1')
@@ -47,6 +50,8 @@ private_recipe_router = APIRouter(
 async def get_recipe_list(
     duration__lte: timedelta | None = Query(default=None),
     duration__gte: timedelta | None = Query(default=None),
+    rating__lte: float | None = Query(default=None),
+    rating__gte: float | None = Query(default=None),
     ingredients: set[str] | None = Query(default=None),
     session: AsyncSession = Depends(get_session),
 ):
@@ -55,6 +60,8 @@ async def get_recipe_list(
         crud.get_recipe_list_query(
             duration__lte,
             duration__gte,
+            rating__lte,
+            rating__gte,
             ingredients,    
         ),
     )
@@ -89,6 +96,16 @@ async def edit_recipe(
 @private_recipe_router.delete('/{id}', status_code=status.HTTP_204_NO_CONTENT)
 async def delete_recipe(id: int, session: AsyncSession = Depends(get_session)):
     await crud.delete_recipe(id, session)
+
+
+@private_recipe_router.post('/{id}/rate', status_code=status.HTTP_204_NO_CONTENT)
+async def rate_recipe(
+    id: int,
+    data: RateData,
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_session),
+):
+    await crud.rate_recipe(id, user.id, data.rate, session)
 
 
 router.include_router(public_recipe_router)
