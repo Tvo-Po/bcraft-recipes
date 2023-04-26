@@ -1,8 +1,6 @@
 from datetime import timedelta
-from typing import Any, Optional
+from typing import Any
 
-from fastapi_filter import FilterDepends, with_prefix
-from fastapi_filter.contrib.sqlalchemy import Filter
 from sqlalchemy import case, delete, func, Result, select, Select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,22 +12,6 @@ from .model import (
     RecipeIngredientAssociation,
     Step,
 )
-
-
-class IngridientFilter(Filter):
-    name__in: Optional[list[str]]
-    
-    class Constants(Filter.Constants):
-        model = Ingredient
-
-
-class RecipeFilter(Filter):
-    ingridients: Optional[IngridientFilter] = FilterDepends(with_prefix(
-        'ingridients', IngridientFilter
-    ))
-    
-    class Constants(Filter.Constants):
-        model = Recipe
 
 
 class ConditionsCombiner:

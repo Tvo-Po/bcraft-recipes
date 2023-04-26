@@ -11,9 +11,9 @@ SQLAlchemy = {extras = ["asyncio"], version = "~2.0.10"}
 pydantic = {extras = ["dotenv"], version = "~1.10.7"}
 alembic = "~1.10.4"
 fastapi = {extras = ["all"], version = "~0.95.1"}
-fastapi-filter = "^0.6.0"
 fastapi-pagination = "~0.12.2"
 asyncpg = "~0.27.0"
+fastapi-users = {extras = ["sqlalchemy"], version = "~10.4.2"}
 
 
 [build-system]

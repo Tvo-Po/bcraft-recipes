@@ -1,9 +1,14 @@
 from datetime import timedelta
 
+from fastapi_users.db import SQLAlchemyBaseUserTableUUID
 from sqlalchemy import Index, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
+
+
+class User(SQLAlchemyBaseUserTableUUID, Base):
+    pass
 
 
 class Recipe(Base):

@@ -1,8 +1,19 @@
 from datetime import timedelta
 from typing import Any
+import uuid
 
-from pydantic import BaseModel
+from fastapi_users import schemas
+from pydantic import BaseModel, EmailStr
 from pydantic.utils import GetterDict
+
+
+class UserRead(schemas.BaseUser[uuid.UUID]):
+    pass
+
+
+class UserCreate(schemas.CreateUpdateDictModel):
+    email: EmailStr
+    password: str
 
 
 class RecipeIngridientGetter(GetterDict):

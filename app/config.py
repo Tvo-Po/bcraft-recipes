@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     DATABASE_URL: str
+    
+    AUTH_SECRET: str
 
     class Config:
         env_file = project_path / '.env'
