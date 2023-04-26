@@ -6,12 +6,14 @@ authors = ["Gleb <maxwellgleb@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.10"
-SQLAlchemy = {extras = ["asyncio"], version = "^2.0.10"}
-pydantic = {extras = ["dotenv"], version = "^1.10.7"}
+python = ">= 3.10, < 3.12"
+SQLAlchemy = {extras = ["asyncio"], version = "~2.0.10"}
+pydantic = {extras = ["dotenv"], version = "~1.10.7"}
 aiosqlite = "^0.19.0"
-alembic = "^1.10.4"
-fastapi = {extras = ["all"], version = "^0.95.1"}
+alembic = "~1.10.4"
+fastapi = {extras = ["all"], version = "~0.95.1"}
+fastapi-filter = "^0.6.0"
+fastapi-pagination = "^0.12.2"
 
 
 [build-system]

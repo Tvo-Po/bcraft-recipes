@@ -1,13 +1,12 @@
-from sqlalchemy import delete, Result, select
+from typing import Any, Optional
+
+from fastapi_filter import FilterDepends, with_prefix
+from fastapi_filter.contrib.sqlalchemy import Filter
+from sqlalchemy import delete, Result, select, Select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import contains_eager, selectinload
 
-from .schema import (
-    FullRecipeData,
-    RecipeEntityResponse,
-    RecipeListResponse,
-)
 from .model import (
     Ingredient,
     Recipe,
@@ -16,26 +15,42 @@ from .model import (
 )
 
 
-async def get_recipe_list(
-    session: AsyncSession,
-) -> list[RecipeListResponse]:
-    recipes = await session.execute(select(Recipe))
-    return [
-        RecipeListResponse.from_orm(recipe)
-        for recipe in recipes.scalars().all()
-    ]
+class IngridientFilter(Filter):
+    name__in: Optional[list[str]]
+    
+    class Constants(Filter.Constants):
+        model = Ingredient
+
+
+class RecipeFilter(Filter):
+    ingridients: Optional[IngridientFilter] = FilterDepends(with_prefix(
+        'ingridients', IngridientFilter
+    ))
+    
+    class Constants(Filter.Constants):
+        model = Recipe
+
+
+def get_recipe_list_query() -> Select[tuple[Recipe]]:
+    return select(Recipe) \
+           .join(Recipe.ingredients) \
+           .join(RecipeIngredientAssociation.ingredient) \
+           .options(
+                contains_eager(Recipe.ingredients)
+                .contains_eager(RecipeIngredientAssociation.ingredient)
+                .load_only(Ingredient.name)
+           )
 
 
 async def create_recipe(
-    data: FullRecipeData,
+    data: dict[str, Any],
     session: AsyncSession,
-) -> RecipeEntityResponse:
-    recipe_dict = data.dict()
+) -> Recipe:
     ingredients = [
-        Ingredient(name=name) for name in recipe_dict.pop('ingredients')
+        Ingredient(name=name) for name in data.pop('ingredients')
     ]
-    steps = [Step(**data) for data in recipe_dict.pop('steps')]
-    recipe = Recipe(**recipe_dict)
+    steps = [Step(**data) for data in data.pop('steps')]
+    recipe = Recipe(**data)
     recipe.steps = steps
     recipe.ingredients = [
         RecipeIngredientAssociation(ingredient=ingredient)
@@ -44,7 +59,7 @@ async def create_recipe(
     session.add(recipe)
     session.add_all(ingredients)
     await session.commit()
-    return RecipeEntityResponse.from_orm(recipe)
+    return recipe
 
 
 async def _get_recipe_result(
@@ -65,23 +80,20 @@ async def _get_recipe_result(
 async def get_recipe(
     id: int,
     session: AsyncSession,
-) -> RecipeEntityResponse:
+) -> Recipe:
     result = await _get_recipe_result(id, session)
-    return RecipeEntityResponse.from_orm(result.one())
+    return result.scalar_one()
 
 
 async def edit_recipe(
     id: int,
-    data: FullRecipeData,
+    data: dict[str, Any],
     session: AsyncSession,
-) -> RecipeEntityResponse:
+) -> Recipe:
     result = await _get_recipe_result(id, session)
     recipe = result.scalar_one()
-    recipe_dict = data.dict()
-    ingredients = [
-        Ingredient(name=name) for name in recipe_dict.pop('ingredients')
-    ]
-    steps = [Step(**data) for data in recipe_dict.pop('steps')]
+    ingredients = [Ingredient(name=name) for name in data.pop('ingredients')]
+    steps = [Step(**data) for data in data.pop('steps')]
     recipe.steps = steps
     recipe.ingredients = [
         RecipeIngredientAssociation(ingredient=ingredient)
@@ -90,7 +102,7 @@ async def edit_recipe(
     session.add(recipe)
     session.add_all(ingredients)
     await session.commit()
-    return RecipeEntityResponse.from_orm(recipe)
+    return recipe
 
 
 async def delete_recipe(

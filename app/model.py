@@ -27,14 +27,14 @@ class RecipeIngredientAssociation(Base):
     __tablename__ = 'recipe_ingredient_association'
     __table_args__ = (
         Index(
-            'recipe_ingredient_association_composite_pk',
+            'ix_recipe_ingredient_association_composite_pk',
             'recipe_id',
             'ingredient_id',
         ),
     )
     
     recipe_id: Mapped[int] = mapped_column(
-        ForeignKey('recipe.id'),
+        ForeignKey('recipe.id', ondelete='CASCADE'),
         primary_key=True,
     )
     ingredient_id: Mapped[int] = mapped_column(
@@ -61,12 +61,12 @@ class Ingredient(Base):
 
 class Step(Base):
     __tablename__ = 'step'
-    __table_args__ = (Index('step_composite_pk', 'recipe_id', 'order'), )
+    __table_args__ = (Index('ix_step_composite_pk', 'recipe_id', 'order'), )
     
     recipe_id: Mapped[int] = mapped_column(
-        ForeignKey("recipe.id"),
+        ForeignKey('recipe.id', ondelete='CASCADE'),
         primary_key=True,
     )
-    recipe: Mapped['Recipe'] = relationship(back_populates="steps")
+    recipe: Mapped['Recipe'] = relationship(back_populates='steps')
     order: Mapped[int] = mapped_column(primary_key=True)
     description: Mapped[str] = mapped_column(String(255), nullable=False)

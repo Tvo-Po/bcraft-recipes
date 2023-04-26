@@ -2,23 +2,6 @@ from pydantic import BaseModel
 from pydantic.utils import GetterDict
 
 
-class RecipeListResponse(BaseModel):
-    id: int
-    name: str
-    description: str
-    
-    class Config:
-        orm_mode = True
-
-
-class RecipeStep(BaseModel):
-    order: int
-    description: str
-    
-    class Config:
-        orm_mode = True
-
-
 class RecipeIngridientGetter(GetterDict):
     def get(self, key: str, default):
         if key == 'ingredients':
@@ -27,6 +10,25 @@ class RecipeIngridientGetter(GetterDict):
                 for association in self._obj.ingredients
             ]
         return super().get(key, default)
+
+
+class RecipeListResponse(BaseModel):
+    id: int
+    name: str
+    description: str
+    ingredients: list[str]
+    
+    class Config:
+        orm_mode = True
+        getter_dict = RecipeIngridientGetter
+
+
+class RecipeStep(BaseModel):
+    order: int
+    description: str
+    
+    class Config:
+        orm_mode = True
 
 
 class RecipeEntityResponse(BaseModel):
