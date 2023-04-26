@@ -1,8 +1,9 @@
+from datetime import timedelta
 from typing import Any, Optional
 
 from fastapi_filter import FilterDepends, with_prefix
 from fastapi_filter.contrib.sqlalchemy import Filter
-from sqlalchemy import delete, Result, select, Select
+from sqlalchemy import case, delete, func, Result, select, Select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import contains_eager, selectinload
@@ -31,15 +32,65 @@ class RecipeFilter(Filter):
         model = Recipe
 
 
-def get_recipe_list_query() -> Select[tuple[Recipe]]:
-    return select(Recipe) \
+class ConditionsCombiner:
+    def __init__(self):
+        self.complex_condition = None
+    
+    def add(self, condition):
+        if condition is None:
+            return self
+        if self.complex_condition is None:
+            self.complex_condition = condition
+            return self
+        self.complex_condition &= condition
+        return self
+
+
+def filter_ingredients(ingredient_names: set[str]):
+    matched_ingredient = case(
+        (Ingredient.name.in_(ingredient_names), 1), 
+        else_=0,
+    )
+    return select(Recipe).with_only_columns(Recipe.id) \
+           .join(Recipe.ingredients) \
+           .join(RecipeIngredientAssociation.ingredient) \
+           .group_by(Recipe.id) \
+           .having(
+               func.sum(matched_ingredient) == len(ingredient_names)
+           )
+
+
+def get_recipe_list_query(
+    duration__lte: timedelta | None = None,
+    duration__gte: timedelta | None = None,
+    ingredient_names: set[str] | None = None,
+) -> Select[tuple[Recipe, timedelta]]:
+    step_sq = select(
+        Step.recipe_id,
+        func.sum(Step.duration).label('total_duration'),
+    ).group_by(Step.recipe_id).subquery()
+    applied_filter = ConditionsCombiner().add(
+        duration__lte and
+        step_sq.c.total_duration <= duration__lte
+    ).add(
+        duration__gte and
+        step_sq.c.total_duration >= duration__gte
+    ).add(
+        ingredient_names and
+        Recipe.id.in_(filter_ingredients(ingredient_names))
+    )
+    query = select(Recipe, step_sq.c.total_duration) \
+           .join(step_sq) \
            .join(Recipe.ingredients) \
            .join(RecipeIngredientAssociation.ingredient) \
            .options(
                 contains_eager(Recipe.ingredients)
                 .contains_eager(RecipeIngredientAssociation.ingredient)
-                .load_only(Ingredient.name)
+                .load_only(Ingredient.name),
            )
+    if applied_filter.complex_condition is None:
+        return query
+    return query.filter(applied_filter.complex_condition)
 
 
 async def create_recipe(

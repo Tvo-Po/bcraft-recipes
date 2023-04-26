@@ -1,15 +1,12 @@
-from typing import Any, cast
+from datetime import timedelta
 
-from fastapi import Depends, status
+from fastapi import Depends, status, Query
 from fastapi.routing import APIRouter
-from fastapi_filter import FilterDepends
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
-from sqlalchemy import Select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from . import crud
-from .config import settings
 from .db import get_session
 from .schema import (
     FullRecipeData,
@@ -22,12 +19,19 @@ router = APIRouter(prefix='/api/v1')
 
 @router.get('/recipe', response_model=Page[RecipeListResponse])
 async def get_recipe_list(
-    filter: crud.RecipeFilter = FilterDepends(crud.RecipeFilter),
+    duration__lte: timedelta | None = Query(default=None),
+    duration__gte: timedelta | None = Query(default=None),
+    ingredients: set[str] | None = Query(default=None),
     session: AsyncSession = Depends(get_session),
 ):
     return await paginate(
         session,
-        cast(Select[Any], filter.filter(crud.get_recipe_list_query())),
+        crud.get_recipe_list_query(
+            duration__lte,
+            duration__gte,
+            ingredients,    
+        ),
+        unique=True,
     )
 
 

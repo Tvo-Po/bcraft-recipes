@@ -1,3 +1,6 @@
+from datetime import timedelta
+from typing import Any
+
 from pydantic import BaseModel
 from pydantic.utils import GetterDict
 
@@ -17,15 +20,22 @@ class RecipeListResponse(BaseModel):
     name: str
     description: str
     ingredients: list[str]
+    duration: timedelta
     
     class Config:
         orm_mode = True
         getter_dict = RecipeIngridientGetter
+    
+    @classmethod
+    def from_orm(cls, obj: tuple[Any, timedelta]):
+        obj[0].duration = obj[1]
+        return super().from_orm(obj[0])
 
 
 class RecipeStep(BaseModel):
     order: int
     description: str
+    duration: timedelta
     
     class Config:
         orm_mode = True
