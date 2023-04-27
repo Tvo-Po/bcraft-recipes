@@ -1,23 +1,9 @@
 from datetime import timedelta
-from uuid import UUID
 
-from fastapi_users.db import SQLAlchemyBaseUserTableUUID
 from sqlalchemy import Index, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .db import Base
-
-
-class Image(Base):
-    __tablename__ = 'image'
-    
-    id: Mapped[UUID] = mapped_column(primary_key=True, index=True)
-    path: Mapped[str] = mapped_column(nullable=False)
-    original_filename: Mapped[str] = mapped_column(nullable=True)
-
-
-class User(SQLAlchemyBaseUserTableUUID, Base):
-    pass
+from app.database.base import Base
 
 
 class RecipeRate(Base):
