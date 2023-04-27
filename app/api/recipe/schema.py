@@ -2,26 +2,8 @@ from datetime import timedelta
 from typing import Any
 import uuid
 
-from fastapi_users import schemas
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 from pydantic.utils import GetterDict
-
-
-class StoredImage(BaseModel):
-    id: uuid.UUID
-    original_filename: str
-    
-    class Config:
-        orm_mode = True
-    
-
-class UserRead(schemas.BaseUser[uuid.UUID]):
-    pass
-
-
-class UserCreate(schemas.CreateUpdateDictModel):
-    email: EmailStr
-    password: str
 
 
 class RecipeIngridientGetter(GetterDict):

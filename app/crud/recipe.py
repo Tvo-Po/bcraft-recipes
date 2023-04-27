@@ -7,27 +7,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import contains_eager, selectinload
 
-from .model import (
+from app.database.tools import FilterConditionChain
+from app.model.recipe import (
     Ingredient,
     Recipe,
     RecipeIngredientAssociation,
     Step,
     RecipeRate,
 )
-
-
-class ConditionsCombiner:
-    def __init__(self):
-        self.complex_condition = None
-    
-    def add(self, condition):
-        if condition is None:
-            return self
-        if self.complex_condition is None:
-            self.complex_condition = condition
-            return self
-        self.complex_condition &= condition
-        return self
 
 
 def filter_ingredients(ingredient_names: set[str]):
@@ -64,39 +51,37 @@ def get_recipe_list_query(
         timedelta(seconds=0),
     )
     rating_column = func.coalesce(rate_sq.c.rating, 0)
-    applied_filter = ConditionsCombiner().add(
-        duration__lte and
+    filters = FilterConditionChain(
+        None if duration__lte is None else
         total_duration_column <= duration__lte
-    ).add(
-        duration__gte and
+    ) & (
+        None if duration__gte is None else
         total_duration_column >= duration__gte
-    ).add(
-        ingredient_names and
+    ) & (
+        None if ingredient_names is None else
         Recipe.id.in_(filter_ingredients(ingredient_names))
-    ).add(
-        rating__lte and
+    ) & (
+        None if rating__lte is None else
         rating_column <= rating__lte
-    ).add(
-        rating__gte and
+    ) & (
+        None if rating__gte is None else
         rating_column >= rating__gte
     )
-    query = select(
-                Recipe,
-                total_duration_column,
-                rating_column,
-            ) \
-           .join(step_sq) \
-           .outerjoin(rate_sq) \
-           .join(Recipe.ingredients) \
-           .join(RecipeIngredientAssociation.ingredient) \
-           .options(
-                contains_eager(Recipe.ingredients)
-                .contains_eager(RecipeIngredientAssociation.ingredient)
-                .load_only(Ingredient.name),
-           )
-    if applied_filter.complex_condition is None:
-        return query
-    return query.filter(applied_filter.complex_condition)
+    return filters.resolve(
+        select(
+            Recipe,
+            total_duration_column,
+            rating_column,
+        ).join(step_sq) \
+         .outerjoin(rate_sq) \
+         .join(Recipe.ingredients) \
+         .join(RecipeIngredientAssociation.ingredient) \
+         .options(
+             contains_eager(Recipe.ingredients)
+            .contains_eager(RecipeIngredientAssociation.ingredient)
+            .load_only(Ingredient.name)
+        )
+    )
 
 
 async def create_recipe(

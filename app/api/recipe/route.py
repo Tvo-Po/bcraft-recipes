@@ -7,46 +7,28 @@ from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-from . import crud
-from .auth import auth_backend, fastapi_users, current_active_user
-from .db import get_session
+from app.crud import recipe as crud
+from app.auth import current_active_user
+from app.database.tools import get_session
 from .schema import (
     FullRecipeData,
     RateData,
     RecipeEntityResponse,
     RecipeListResponse,
-    UserCreate,
-    UserRead,
 )
-from .model import User
+from app.model.user import User
 
 
-router = APIRouter(prefix='/api/v1')
-
-
-router.include_router(
-    fastapi_users.get_auth_router(auth_backend), prefix='/auth/jwt', tags=['auth']
-)
-router.include_router(
-    fastapi_users.get_register_router(UserRead, UserCreate),
-    prefix='/auth',
-    tags=['auth'],
-)
-
-
-public_recipe_router = APIRouter(
-    prefix='/recipe',
-    tags=['recipe'],
-)
-
-private_recipe_router = APIRouter(
+router = APIRouter(prefix='/recipe', tags=['recipe'])
+public_router = APIRouter(prefix='/recipe', tags=['recipe'])
+auth_only_router = APIRouter(
     prefix='/recipe',
     tags=['recipe'],
     dependencies=[Depends(current_active_user)],
 )
 
 
-@public_recipe_router.get('', response_model=Page[RecipeListResponse])
+@public_router.get('', response_model=Page[RecipeListResponse])
 async def get_recipe_list(
     duration__lte: timedelta | None = Query(default=None),
     duration__gte: timedelta | None = Query(default=None),
@@ -68,7 +50,7 @@ async def get_recipe_list(
 
 
 # TODO: crazy ad hoc - rework
-@private_recipe_router.post(
+@auth_only_router.post(
     '',
     response_model=RecipeEntityResponse,
     status_code=status.HTTP_201_CREATED,
@@ -81,7 +63,7 @@ async def create_recipe(
     return await crud.create_recipe(data.dict(), session), request
 
 
-@public_recipe_router.get('/{id}', response_model=RecipeEntityResponse)
+@public_router.get('/{id}', response_model=RecipeEntityResponse)
 async def get_recipe(
     id: int,
     request: Request,
@@ -90,7 +72,7 @@ async def get_recipe(
     return await crud.get_recipe(id, session), request
 
 
-@private_recipe_router.put('/{id}', response_model=RecipeEntityResponse)
+@auth_only_router.put('/{id}', response_model=RecipeEntityResponse)
 async def edit_recipe(
     id: int,
     data: FullRecipeData,
@@ -100,12 +82,12 @@ async def edit_recipe(
     return await crud.edit_recipe(id, data.dict(), session), request
 
 
-@private_recipe_router.delete('/{id}', status_code=status.HTTP_204_NO_CONTENT)
+@auth_only_router.delete('/{id}', status_code=status.HTTP_204_NO_CONTENT)
 async def delete_recipe(id: int, session: AsyncSession = Depends(get_session)):
     await crud.delete_recipe(id, session)
 
 
-@private_recipe_router.post('/{id}/rate', status_code=status.HTTP_204_NO_CONTENT)
+@auth_only_router.post('/{id}/rate', status_code=status.HTTP_204_NO_CONTENT)
 async def rate_recipe(
     id: int,
     data: RateData,
@@ -115,5 +97,5 @@ async def rate_recipe(
     await crud.rate_recipe(id, user.id, data.rate, session)
 
 
-router.include_router(public_recipe_router)
-router.include_router(private_recipe_router)
+router.include_router(public_router)
+router.include_router(auth_only_router)
