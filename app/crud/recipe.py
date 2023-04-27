@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from sqlalchemy import case, delete, func, Result, select, Select
@@ -88,18 +88,29 @@ async def create_recipe(
     data: dict[str, Any],
     session: AsyncSession,
 ) -> Recipe:
-    ingredients = [
-        Ingredient(name=name) for name in data.pop('ingredients')
+    ingredient_names = data.pop('ingredients')
+    existing_ingredients = cast(list[Ingredient],
+            (
+            await session.execute(
+                select(Ingredient)
+            .filter(Ingredient.name.in_(ingredient_names))
+            )
+        ).scalars().all()
+    )
+    new_ingredients = [
+        Ingredient(name=name) for name in
+        ingredient_names - {i.name for i in existing_ingredients}
     ]
+    existing_ingredients.extend(new_ingredients)
     steps = [Step(**data) for data in data.pop('steps')]
     recipe = Recipe(**data)
     recipe.steps = steps
     recipe.ingredients = [
         RecipeIngredientAssociation(ingredient=ingredient)
-        for ingredient in ingredients
+        for ingredient in existing_ingredients
     ]
     session.add(recipe)
-    session.add_all(ingredients)
+    session.add_all(new_ingredients)
     await session.commit()
     return recipe
 
@@ -132,17 +143,30 @@ async def edit_recipe(
     data: dict[str, Any],
     session: AsyncSession,
 ) -> Recipe:
+    ingredient_names = data.pop('ingredients')
+    existing_ingredients = cast(list[Ingredient],
+            (
+            await session.execute(
+                select(Ingredient)
+            .filter(Ingredient.name.in_(ingredient_names))
+            )
+        ).scalars().all()
+    )
+    new_ingredients = [
+        Ingredient(name=name) for name in
+        ingredient_names - {i.name for i in existing_ingredients}
+    ]
+    existing_ingredients.extend(new_ingredients)
     result = await _get_recipe_result(id, session)
     recipe = result.scalar_one()
-    ingredients = [Ingredient(name=name) for name in data.pop('ingredients')]
     steps = [Step(**data) for data in data.pop('steps')]
     recipe.steps = steps
     recipe.ingredients = [
         RecipeIngredientAssociation(ingredient=ingredient)
-        for ingredient in ingredients
+        for ingredient in existing_ingredients
     ]
     session.add(recipe)
-    session.add_all(ingredients)
+    session.add_all(new_ingredients)
     await session.commit()
     return recipe
 

@@ -2,7 +2,7 @@ from datetime import timedelta
 from typing import Any
 import uuid
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from pydantic.utils import GetterDict
 
 
@@ -70,14 +70,40 @@ class UploadRecipeStep(BaseModel):
     
     class Config:
         orm_mode = True
+    
+    @validator('duration')
+    def validate_first_step(cls, duration: timedelta, values):
+        if duration < timedelta(seconds=60):
+            raise ValueError(
+                "Duration must be at least 1m "
+                f"not {duration.total_seconds()}s."
+            )
+        return duration
 
 
 class FullRecipeData(BaseModel):
-    name: str
+    name: str = Field(min_length=1)
     description: str
     image_id: uuid.UUID
     ingredients: set[str]
     steps: list[UploadRecipeStep]
+    
+    @validator('steps')
+    def validate_first_step(cls, steps: list[UploadRecipeStep], values):
+        if min(steps, key=lambda s: s.order).order != 1:
+            raise ValueError("Steps order must starts from 1.")
+        return steps
+    
+    @validator('steps')
+    def validate_steps_sequence(cls, steps: list[UploadRecipeStep], values):
+        steps_order = sorted(step.order for step in steps)
+        if steps_order != list(range(min(steps_order), max(steps_order) + 1)):
+            raise ValueError(
+                "Steps order must form arithmetic progression "
+                "with common difference equals 1. "
+                "(example: [1, 2, 3, ..., 8, 9])"
+            )
+        return steps
 
 
 class RateData(BaseModel):
