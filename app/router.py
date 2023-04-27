@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from fastapi import Depends, status, Query
+from fastapi import Depends, Request, status, Query
 from fastapi.routing import APIRouter
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
@@ -67,6 +67,7 @@ async def get_recipe_list(
     )
 
 
+# TODO: crazy ad hoc - rework
 @private_recipe_router.post(
     '',
     response_model=RecipeEntityResponse,
@@ -74,23 +75,29 @@ async def get_recipe_list(
 )
 async def create_recipe(
     data: FullRecipeData,
+    request: Request,
     session: AsyncSession = Depends(get_session),
 ):
-    return await crud.create_recipe(data.dict(), session)
+    return await crud.create_recipe(data.dict(), session), request
 
 
 @public_recipe_router.get('/{id}', response_model=RecipeEntityResponse)
-async def get_recipe(id: int, session: AsyncSession = Depends(get_session)):
-    return await crud.get_recipe(id, session)
+async def get_recipe(
+    id: int,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+):
+    return await crud.get_recipe(id, session), request
 
 
 @private_recipe_router.put('/{id}', response_model=RecipeEntityResponse)
 async def edit_recipe(
     id: int,
     data: FullRecipeData,
+    request: Request,
     session: AsyncSession = Depends(get_session),
 ):
-    return await crud.edit_recipe(id, data.dict(), session)
+    return await crud.edit_recipe(id, data.dict(), session), request
 
 
 @private_recipe_router.delete('/{id}', status_code=status.HTTP_204_NO_CONTENT)

@@ -1,10 +1,19 @@
 from datetime import timedelta
+from uuid import UUID
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
 from sqlalchemy import Index, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
+
+
+class Image(Base):
+    __tablename__ = 'image'
+    
+    id: Mapped[UUID] = mapped_column(primary_key=True, index=True)
+    path: Mapped[str] = mapped_column(nullable=False)
+    original_filename: Mapped[str] = mapped_column(nullable=True)
 
 
 class User(SQLAlchemyBaseUserTableUUID, Base):
@@ -42,6 +51,10 @@ class Recipe(Base):
     )
     name: Mapped[str] = mapped_column(String(127), nullable=False)
     description: Mapped[str] = mapped_column(String(255), nullable=False)
+    image_id: Mapped[int] = mapped_column(
+        ForeignKey('image.id', ondelete='RESTRICT'),
+        nullable=False,
+    )
     ingredients: Mapped[list['RecipeIngredientAssociation']] = relationship(
         cascade='all, delete-orphan',
     )
@@ -102,3 +115,7 @@ class Step(Base):
     order: Mapped[int] = mapped_column(primary_key=True)
     description: Mapped[str] = mapped_column(String(255), nullable=False)
     duration: Mapped[timedelta] = mapped_column(nullable=False)
+    image_id: Mapped[int] = mapped_column(
+        ForeignKey('image.id', ondelete='RESTRICT'),
+        nullable=False,
+    )

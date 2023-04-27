@@ -7,6 +7,14 @@ from pydantic import BaseModel, EmailStr, Field
 from pydantic.utils import GetterDict
 
 
+class StoredImage(BaseModel):
+    id: uuid.UUID
+    original_filename: str
+    
+    class Config:
+        orm_mode = True
+    
+
 class UserRead(schemas.BaseUser[uuid.UUID]):
     pass
 
@@ -58,20 +66,37 @@ class RecipeEntityResponse(BaseModel):
     id: int
     name: str
     description: str
+    image_url: str
     ingredients: list[str]
     steps: list[RecipeStep]
     
     class Config:
         orm_mode = True
         getter_dict = RecipeIngridientGetter
+    
+    @classmethod
+    def from_orm(cls, obj):
+        obj[0].image_url = obj[1].url_for('get_image', id=obj[0].image_id)._url 
+        return super().from_orm(obj[0])
+
+
+class UploadRecipeStep(BaseModel):
+    order: int
+    description: str
+    duration: timedelta
+    image_id: uuid.UUID
+    
+    class Config:
+        orm_mode = True
 
 
 class FullRecipeData(BaseModel):
     name: str
     description: str
+    image_id: uuid.UUID
     ingredients: set[str]
-    steps: list[RecipeStep]
+    steps: list[UploadRecipeStep]
 
 
 class RateData(BaseModel):
-    rate: int = Field(ge=0, le=5)
+    rate: int = Field(ge=1, le=5)
