@@ -2,9 +2,10 @@ from datetime import timedelta
 from typing import Any, cast
 from uuid import UUID
 
+from asyncpg.exceptions import ForeignKeyViolationError
 from sqlalchemy import case, delete, func, Result, select, Select
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError, NoResultFound
+from sqlalchemy.ext.asyncio import AsyncSession, AsyncEngine
 from sqlalchemy.orm import contains_eager, selectinload
 
 from app.database.tools import FilterConditionChain
@@ -173,10 +174,12 @@ async def edit_recipe(
 
 async def delete_recipe(
     id: int,
-    session: AsyncSession,
+    engine: AsyncEngine,
 ):
-    await session.execute(delete(Recipe).filter_by(id=id))
-    await session.commit()
+    async with engine.connect() as conn:
+        result = await conn.execute(delete(Recipe).filter_by(id=id))
+    if result.rowcount == 0:
+        raise NoResultFound("Recipe with given id not found.")
 
 
 async def rate_recipe(
@@ -185,5 +188,13 @@ async def rate_recipe(
     rate: int,
     session: AsyncSession,
 ):
-    session.add(RecipeRate(recipe_id=recipe_id, user_id=user_id, rate=rate))
-    await session.commit()
+    try:
+        session.add(RecipeRate(recipe_id=recipe_id, user_id=user_id, rate=rate))
+        await session.commit()
+    except IntegrityError as exc:
+        try:
+            if isinstance(exc.__cause__.__cause__, ForeignKeyViolationError): # type: ignore
+                raise NoResultFound("Recipe with given id not found.")
+            raise exc
+        except AttributeError:
+            raise exc

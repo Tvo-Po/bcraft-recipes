@@ -4,12 +4,11 @@ from fastapi import Depends, Request, status, Query
 from fastapi.routing import APIRouter
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
-from sqlalchemy.ext.asyncio import AsyncSession
-
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from app.crud import recipe as crud
 from app.auth import current_active_user
-from app.database.tools import get_session
+from app.database.tools import get_engine, get_session
 from .schema import (
     FullRecipeData,
     RateData,
@@ -83,8 +82,8 @@ async def edit_recipe(
 
 
 @auth_only_router.delete('/{id}', status_code=status.HTTP_204_NO_CONTENT)
-async def delete_recipe(id: int, session: AsyncSession = Depends(get_session)):
-    await crud.delete_recipe(id, session)
+async def delete_recipe(id: int, engine: AsyncEngine = Depends(get_engine)):
+    await crud.delete_recipe(id, engine)
 
 
 @auth_only_router.post('/{id}/rate', status_code=status.HTTP_204_NO_CONTENT)

@@ -1,6 +1,6 @@
 from typing import AsyncIterable
 
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy import Select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql.elements import BooleanClauseList, ColumnElement
@@ -15,6 +15,10 @@ async_session = sessionmaker(
     class_=AsyncSession,
     expire_on_commit=False,
 )
+
+
+def get_engine() -> AsyncEngine:
+    return engine
 
 
 async def get_session() -> AsyncIterable[AsyncSession]:
