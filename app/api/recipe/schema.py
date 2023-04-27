@@ -1,6 +1,5 @@
 from datetime import timedelta
-from typing import Any
-import uuid
+from uuid import UUID
 
 from pydantic import BaseModel, Field, validator
 from pydantic.utils import GetterDict
@@ -16,6 +15,28 @@ class RecipeIngridientGetter(GetterDict):
         return super().get(key, default)
 
 
+class RecipeListAnnotationGetter(GetterDict):
+    _MODEL = 0
+    _DURATION = 1
+    _RATING = 2
+    
+    def get(self, key: str, default):
+        if key == 'ingredients':
+            return [
+                association.ingredient.name
+                for association in self._obj[self._MODEL].ingredients
+            ]
+        if key == 'duration':
+            return self._obj[self._DURATION]
+        if key == 'rating':
+            return self._obj[self._RATING]
+        row = self._obj
+        self._obj = row[self._MODEL]
+        model_field = super().get(key, default)
+        self._obj = row
+        return model_field
+
+
 class RecipeListResponse(BaseModel):
     id: int
     name: str
@@ -26,19 +47,14 @@ class RecipeListResponse(BaseModel):
     
     class Config:
         orm_mode = True
-        getter_dict = RecipeIngridientGetter
-    
-    @classmethod
-    def from_orm(cls, obj: tuple[Any, timedelta, float]):
-        obj[0].duration = obj[1]
-        obj[0].rating = obj[2]
-        return super().from_orm(obj[0])
+        getter_dict = RecipeListAnnotationGetter
 
 
 class RecipeStep(BaseModel):
     order: int
     description: str
     duration: timedelta
+    image_id: UUID
     
     class Config:
         orm_mode = True
@@ -48,25 +64,20 @@ class RecipeEntityResponse(BaseModel):
     id: int
     name: str
     description: str
-    image_url: str
+    image_id: UUID
     ingredients: list[str]
     steps: list[RecipeStep]
     
     class Config:
         orm_mode = True
         getter_dict = RecipeIngridientGetter
-    
-    @classmethod
-    def from_orm(cls, obj):
-        obj[0].image_url = obj[1].url_for('get_image', id=obj[0].image_id)._url 
-        return super().from_orm(obj[0])
 
 
 class UploadRecipeStep(BaseModel):
     order: int
     description: str
     duration: timedelta
-    image_id: uuid.UUID
+    image_id: UUID
     
     class Config:
         orm_mode = True
@@ -84,7 +95,7 @@ class UploadRecipeStep(BaseModel):
 class FullRecipeData(BaseModel):
     name: str = Field(min_length=1)
     description: str
-    image_id: uuid.UUID
+    image_id: UUID
     ingredients: set[str]
     steps: list[UploadRecipeStep]
     

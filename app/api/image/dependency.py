@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 from fastapi import File, UploadFile
 from PIL import Image as PILImage, UnidentifiedImageError
 
-from .schema import CreateImage, StoredImage
+from .schema import CreateImage
 from app.exception import InvalidImagesError
 from app.util import save_image_to_media
 
@@ -14,7 +14,9 @@ from app.util import save_image_to_media
 ValidImage: TypeAlias = tuple[UUID, io.BytesIO, str | None, str | None]
 
 
-async def get_stored_images(files: list[UploadFile] = File()):
+async def get_uploaded_images(
+    files: list[UploadFile] = File()
+) -> list[CreateImage]:
     valid_images: list[ValidImage] = []
     invalid_images: list[tuple[int, str | None]] = []
     for i, file in enumerate(files):
