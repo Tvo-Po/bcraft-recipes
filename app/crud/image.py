@@ -8,9 +8,7 @@ from app.model.image import Image
 
 
 async def get_image_path(id: UUID, session: AsyncSession) -> str:
-    return (
-        await session.execute(select(Image).filter_by(id=id))
-    ).scalars().one().path
+    return (await session.execute(select(Image).filter_by(id=id))).scalars().one().path
 
 
 async def create_images(

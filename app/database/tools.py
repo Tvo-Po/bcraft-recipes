@@ -24,14 +24,14 @@ def get_engine() -> AsyncEngine:
 async def get_session() -> AsyncIterable[AsyncSession]:
     async with async_session() as session:
         yield session
-        
+
 
 class FilterConditionChain:
     complex_condition: BooleanClauseList | ColumnElement[bool] | None
-    
+
     def __init__(self, condition: ColumnElement[bool] | None):
         self.complex_condition = condition
-    
+
     def __and__(self, condition: ColumnElement[bool] | None):
         if condition is None:
             return self
@@ -40,7 +40,7 @@ class FilterConditionChain:
             return self
         self.complex_condition &= condition
         return self
-    
+
     def resolve(self, query: Select[_TP]) -> Select[_TP]:
         if self.complex_condition is None:
             return query

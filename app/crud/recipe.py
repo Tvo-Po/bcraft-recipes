@@ -2,7 +2,7 @@ from datetime import timedelta
 from typing import Any, cast
 from uuid import UUID
 
-from asyncpg.exceptions import ForeignKeyViolationError
+from asyncpg.exceptions import ForeignKeyViolationError  # type: ignore
 from sqlalchemy import case, delete, func, Result, select, Select
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession, AsyncEngine
@@ -20,19 +20,20 @@ from app.model.recipe import (
 
 
 def _get_query_with_recipe_ids_containing_all_given_ingredients(
-    ingredient_names: set[str]
+    ingredient_names: set[str],
 ):
     matched_ingredient = case(
-        (Ingredient.name.in_(ingredient_names), 1), 
+        (Ingredient.name.in_(ingredient_names), 1),
         else_=0,
     )
-    return select(Recipe).with_only_columns(Recipe.id) \
-           .join(Recipe.ingredients) \
-           .join(RecipeIngredientAssociation.ingredient) \
-           .group_by(Recipe.id) \
-           .having(
-               func.sum(matched_ingredient) == len(ingredient_names)
-           )
+    return (
+        select(Recipe)
+        .with_only_columns(Recipe.id)
+        .join(Recipe.ingredients)
+        .join(RecipeIngredientAssociation.ingredient)
+        .group_by(Recipe.id)
+        .having(func.sum(matched_ingredient) == len(ingredient_names))
+    )
 
 
 def _get_filters(
@@ -41,39 +42,36 @@ def _get_filters(
     id_column: SQLColumnExpression,
     duration__lte: timedelta | None = None,
     duration__gte: timedelta | None = None,
-    rating__lte: float |  None = None,
-    rating__gte: float |  None = None,
-    ingredient_names: set[str] | None = None
+    rating__lte: float | None = None,
+    rating__gte: float | None = None,
+    ingredient_names: set[str] | None = None,
 ) -> FilterConditionChain:
-    filters = FilterConditionChain(
-        None if duration__lte is None else
-        duration_column <= duration__lte
-    ) & (
-        None if duration__gte is None else
-        duration_column >= duration__gte
-    ) & (
-        None if ingredient_names is None else
-        id_column.in_(
-            _get_query_with_recipe_ids_containing_all_given_ingredients(
-                ingredient_names
+    filters = (
+        FilterConditionChain(
+            None if duration__lte is None else duration_column <= duration__lte
+        )
+        & (None if duration__gte is None else duration_column >= duration__gte)
+        & (
+            None
+            if ingredient_names is None
+            else id_column.in_(
+                _get_query_with_recipe_ids_containing_all_given_ingredients(
+                    ingredient_names
+                )
             )
         )
-    ) & (
-        None if rating__lte is None else
-        rating_column <= rating__lte
-    ) & (
-        None if rating__gte is None else
-        rating_column >= rating__gte
+        & (None if rating__lte is None else rating_column <= rating__lte)
+        & (None if rating__gte is None else rating_column >= rating__gte)
     )
     return filters
 
 
 def apply_order(
-        query: Select,
-        duration_column: SQLColumnExpression,
-        rating_column: SQLColumnExpression,
-        order: str | None,
-    ) -> Select:
+    query: Select,
+    duration_column: SQLColumnExpression,
+    rating_column: SQLColumnExpression,
+    order: str | None,
+) -> Select:
     if order is None:
         return query
     if 'duration' in order:
@@ -88,19 +86,29 @@ def apply_order(
 def get_recipe_list_query(
     duration__lte: timedelta | None = None,
     duration__gte: timedelta | None = None,
-    rating__lte: float |  None = None,
-    rating__gte: float |  None = None,
+    rating__lte: float | None = None,
+    rating__gte: float | None = None,
     ingredient_names: set[str] | None = None,
     order: str | None = None,
 ) -> Select[tuple[Recipe, timedelta, float]]:
-    step_sq = select(
-        Step.recipe_id,
-        func.sum(Step.duration).label('total_duration'),
-    ).group_by(Step.recipe_id).subquery()
-    rate_sq = select(
-        RecipeRate.recipe_id,
-        func.avg(RecipeRate.rate).label('rating'),
-    ).group_by(RecipeRate.recipe_id,).subquery()
+    step_sq = (
+        select(
+            Step.recipe_id,
+            func.sum(Step.duration).label('total_duration'),
+        )
+        .group_by(Step.recipe_id)
+        .subquery()
+    )
+    rate_sq = (
+        select(
+            RecipeRate.recipe_id,
+            func.avg(RecipeRate.rate).label('rating'),
+        )
+        .group_by(
+            RecipeRate.recipe_id,
+        )
+        .subquery()
+    )
     total_duration_column = func.coalesce(
         step_sq.c.total_duration,
         timedelta(seconds=0),
@@ -110,7 +118,6 @@ def get_recipe_list_query(
         total_duration_column,
         rating_column,
         Recipe.id,
-        
         duration__lte,
         duration__gte,
         rating__lte,
@@ -123,10 +130,11 @@ def get_recipe_list_query(
                 Recipe,
                 total_duration_column,
                 rating_column,
-            ).join(step_sq) \
-            .outerjoin(rate_sq) \
-            .join(Recipe.ingredients) \
-            .join(RecipeIngredientAssociation.ingredient) \
+            )
+            .join(step_sq)
+            .outerjoin(rate_sq)
+            .join(Recipe.ingredients)
+            .join(RecipeIngredientAssociation.ingredient)
             .options(
                 contains_eager(Recipe.ingredients)
                 .contains_eager(RecipeIngredientAssociation.ingredient)
@@ -144,11 +152,12 @@ async def _get_recipe_result(
     session: AsyncSession,
 ) -> Result[tuple[Recipe]]:
     return (
-            await session.execute(
+        await session.execute(
             select(Recipe)
             .options(
-                joinedload(Recipe.ingredients)
-                .joinedload(RecipeIngredientAssociation.ingredient)
+                joinedload(Recipe.ingredients).joinedload(
+                    RecipeIngredientAssociation.ingredient
+                )
             )
             .options(joinedload(Recipe.steps))
             .filter_by(id=id)
@@ -168,17 +177,19 @@ async def _get_existing_and_new_ingredients_from_names(
     ingredient_names: set[str],
     session: AsyncSession,
 ) -> tuple[list[Ingredient], list[Ingredient]]:
-    existing_ingredients = cast(list[Ingredient],
+    existing_ingredients = cast(
+        list[Ingredient],
         (
             await session.execute(
-                select(Ingredient)
-            .filter(Ingredient.name.in_(ingredient_names))
+                select(Ingredient).filter(Ingredient.name.in_(ingredient_names))
             )
-        ).scalars().all()
+        )
+        .scalars()
+        .all(),
     )
     new_ingredients = [
-        Ingredient(name=name) for name in
-        ingredient_names - {i.name for i in existing_ingredients}
+        Ingredient(name=name)
+        for name in ingredient_names - {i.name for i in existing_ingredients}
     ]
     return existing_ingredients, new_ingredients
 
@@ -258,7 +269,7 @@ async def rate_recipe(
         await session.commit()
     except IntegrityError as exc:
         try:
-            if isinstance(exc.__cause__.__cause__, ForeignKeyViolationError): # type: ignore
+            if isinstance(exc.__cause__.__cause__, ForeignKeyViolationError):  # type: ignore
                 raise NoResultFound("Recipe with given id not found.")
             raise exc
         except AttributeError:

@@ -12,6 +12,6 @@ class CreateImage(BaseModel):
 class StoredImage(BaseModel):
     id: UUID
     original_filename: str | None
-    
+
     class Config:
         orm_mode = True

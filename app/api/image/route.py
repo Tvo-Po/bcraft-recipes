@@ -22,10 +22,7 @@ async def upload_images(
     ),
     session: AsyncSession = Depends(get_session),
 ):
-    await crud.create_images(
-        [img.dict() for img in images],
-        session
-    )
+    await crud.create_images([img.dict() for img in images], session)
     return images
 
 

@@ -14,9 +14,7 @@ from app.util import save_image_to_media
 ValidImage: TypeAlias = tuple[UUID, io.BytesIO, str | None, str | None]
 
 
-async def get_uploaded_images(
-    files: list[UploadFile] = File()
-) -> list[CreateImage]:
+async def get_uploaded_images(files: list[UploadFile] = File()) -> list[CreateImage]:
     valid_images: list[ValidImage] = []
     invalid_images: list[tuple[int, str | None]] = []
     for i, file in enumerate(files):
@@ -30,22 +28,27 @@ async def get_uploaded_images(
         except UnidentifiedImageError:
             invalid_images.append((i, file.filename))
         else:
-            valid_images.append((
-                uuid4(),
-                binary_image,
-                img.format,
-                file.filename,
-            ))
+            valid_images.append(
+                (
+                    uuid4(),
+                    binary_image,
+                    img.format,
+                    file.filename,
+                )
+            )
     if invalid_images:
         raise InvalidImagesError(invalid_images)
-    paths = await asyncio.gather(*[
-        save_image_to_media(id, bin_img, frmt)
-        for id, bin_img, frmt, _ in valid_images
-    ])
+    paths = await asyncio.gather(
+        *[
+            save_image_to_media(id, bin_img, frmt)
+            for id, bin_img, frmt, _ in valid_images
+        ]
+    )
     return [
         CreateImage(
             id=id,
             path=path.as_posix(),
             original_filename=filename,
-        ) for path, (id, _, _, filename) in zip(paths, valid_images)
+        )
+        for path, (id, _, _, filename) in zip(paths, valid_images)
     ]

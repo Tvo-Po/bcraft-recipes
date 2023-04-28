@@ -1,5 +1,4 @@
 from datetime import timedelta
-from typing import Literal
 
 from fastapi import Depends, status, Query
 from fastapi.routing import APIRouter
@@ -71,6 +70,7 @@ async def get_recipe(
     session: AsyncSession = Depends(get_session),
 ):
     return await crud.get_recipe(id, session)
+
 
 @auth_only_router.put('/{id}', response_model=RecipeEntityResponse)
 async def edit_recipe(

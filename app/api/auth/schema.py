@@ -15,6 +15,6 @@ class UserCreate(schemas.CreateUpdateDictModel):
 
 class AuthUser(BaseModel):
     id: UUID
-    
+
     class Config:
         orm_mode = True

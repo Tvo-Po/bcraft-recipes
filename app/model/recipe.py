@@ -15,7 +15,7 @@ class RecipeRate(Base):
             'recipe_id',
         ),
     )
-    
+
     user_id: Mapped[int] = mapped_column(
         ForeignKey('user.id', ondelete='CASCADE'),
         primary_key=True,
@@ -62,7 +62,7 @@ class RecipeIngredientAssociation(Base):
             'ingredient_id',
         ),
     )
-    
+
     recipe_id: Mapped[int] = mapped_column(
         ForeignKey('recipe.id', ondelete='CASCADE'),
         primary_key=True,
@@ -76,7 +76,7 @@ class RecipeIngredientAssociation(Base):
 
 class Ingredient(Base):
     __tablename__ = 'ingredient'
-    
+
     id: Mapped[int] = mapped_column(
         autoincrement=True,
         primary_key=True,
@@ -91,8 +91,8 @@ class Ingredient(Base):
 
 class Step(Base):
     __tablename__ = 'step'
-    __table_args__ = (Index('ix_step_composite_pk', 'recipe_id', 'order'), )
-    
+    __table_args__ = (Index('ix_step_composite_pk', 'recipe_id', 'order'),)
+
     recipe_id: Mapped[int] = mapped_column(
         ForeignKey('recipe.id', ondelete='CASCADE'),
         primary_key=True,

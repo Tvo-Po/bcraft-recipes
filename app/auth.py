@@ -10,9 +10,9 @@ from fastapi_users.authentication import (
 from fastapi_users.db import SQLAlchemyUserDatabase
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .config import settings
 from app.database.tools import get_session
 from app.model.user import User
+from .config import settings
 
 
 class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
