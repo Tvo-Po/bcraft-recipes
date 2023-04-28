@@ -4,29 +4,12 @@ from random import choice, randint
 from uuid import uuid4
 
 from faker import Faker
-from PIL import Image
 
 from app.database.tools import async_session
 from app.config import settings
 from app.crud.image import create_images
 from app.crud.recipe import create_recipe
-
-
-def generate_image():
-    id = uuid4()
-    proportion = choice([(1, 2), (3, 4), (1, 1), (4, 3), (2, 1)])
-    width = randint(380, 640)
-    height = int(width / proportion[0] * proportion[1])
-    img = Image.new('RGB', (width, height), color=(255, 255, 255))
-    for x in range(width):
-        for y in range(height):
-            r = randint(0, 255)
-            g = randint(0, 255)
-            b = randint(0, 255)
-            img.putpixel((x,y), value=(r, g, b))
-    with open(settings.MEDIA_PATH / f'{id.hex}.jpeg', 'wb') as img_file:
-        img.save(img_file)
-    return id
+from app.util import generate_image as gi
 
 
 def generate_step(fake, step, images):
@@ -36,6 +19,14 @@ def generate_step(fake, step, images):
         'duration': timedelta(seconds=randint(120, 5200)),
         'image_id': choice(images),
     }
+
+
+def generate_image():
+    id = uuid4()
+    img = gi()
+    with open(settings.MEDIA_PATH / f'{id.hex}.jpeg', 'wb') as img_file:
+        img.save(img_file)
+    return id
 
 
 def generate_ingredient(fake):
@@ -59,7 +50,7 @@ async def save_in_db(fake, images, recipes):
                 {
                     'id': i,
                     'path': (settings.MEDIA_PATH / f'{i.hex}.jpeg').as_posix(),
-                    'original_filename': fake.word() + '.png'
+                    'original_filename': fake.word() + '.png',
                 }
                 for i in images
             ],
@@ -67,7 +58,7 @@ async def save_in_db(fake, images, recipes):
         )
         for r in recipes:
             await create_recipe(r, session)
-    
+
 
 def populate():
     fake = Faker()

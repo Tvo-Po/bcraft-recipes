@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import Depends
+from fastapi import Depends, status
 from fastapi.responses import FileResponse
 from fastapi.routing import APIRouter
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,7 +14,11 @@ from app.crud import image as crud
 router = APIRouter(prefix='/images', tags=['images'])
 
 
-@router.post('/upload', response_model=list[StoredImage])
+@router.post(
+    '/upload',
+    response_model=list[StoredImage],
+    status_code=status.HTTP_201_CREATED,
+)
 async def upload_images(
     images: list[CreateImage] = Depends(
         get_uploaded_images,

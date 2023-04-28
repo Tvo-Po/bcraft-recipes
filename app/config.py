@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     DATABASE_URL: str
+    TEST_DATABASE_URL: str
+    TEST_CONNECTION_FOR_DB_LEVEL_DDL: str
 
     AUTH_SECRET: str
 
