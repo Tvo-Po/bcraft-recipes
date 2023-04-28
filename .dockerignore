@@ -1,0 +1,16 @@
+.vscode/
+
+__pycache__/
+
+/media/*
+!/media/.gitkeep
+
+/.mypy_cache/
+/.pytest_cache/
+
+/tests/
+.coverage
+.gitignore
+.pre-commit-config.yaml
+README.md
+specification.md
