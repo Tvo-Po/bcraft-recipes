@@ -1,5 +1,8 @@
 .vscode/
 
-.env
-
 __pycache__/
+
+/media/*
+!/media/.gitkeep
+
+.mypy_cache/
