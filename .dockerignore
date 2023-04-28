@@ -2,15 +2,15 @@
 
 __pycache__/
 
-/media/*
-!/media/.gitkeep
+.git/
+.mypy_cache/
+.pytest_cache/
 
-/.mypy_cache/
-/.pytest_cache/
-
-/tests/
+tests/
 .coverage
 .gitignore
 .pre-commit-config.yaml
+docker-compose.yaml
+Dockerfile
 README.md
 specification.md
