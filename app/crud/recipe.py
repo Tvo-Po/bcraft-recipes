@@ -68,12 +68,30 @@ def _get_filters(
     return filters
 
 
+def apply_order(
+        query: Select,
+        duration_column: SQLColumnExpression,
+        rating_column: SQLColumnExpression,
+        order: str | None,
+    ) -> Select:
+    if order is None:
+        return query
+    if 'duration' in order:
+        c = duration_column if order[0] != '-' else duration_column.desc()
+        return query.order_by(c)
+    if 'rating' in order:
+        c = rating_column if order[0] != '-' else rating_column.desc()
+        return query.order_by(c)
+    raise ValueError('Unexpected order parameter.')
+
+
 def get_recipe_list_query(
     duration__lte: timedelta | None = None,
     duration__gte: timedelta | None = None,
     rating__lte: float |  None = None,
     rating__gte: float |  None = None,
     ingredient_names: set[str] | None = None,
+    order: str | None = None,
 ) -> Select[tuple[Recipe, timedelta, float]]:
     step_sq = select(
         Step.recipe_id,
@@ -99,20 +117,25 @@ def get_recipe_list_query(
         rating__gte,
         ingredient_names,
     )
-    return filters.resolve(
-        select(
-            Recipe,
-            total_duration_column,
-            rating_column,
-        ).join(step_sq) \
-         .outerjoin(rate_sq) \
-         .join(Recipe.ingredients) \
-         .join(RecipeIngredientAssociation.ingredient) \
-         .options(
-             contains_eager(Recipe.ingredients)
-            .contains_eager(RecipeIngredientAssociation.ingredient)
-            .load_only(Ingredient.name)
-        )
+    return apply_order(
+        filters.resolve(
+            select(
+                Recipe,
+                total_duration_column,
+                rating_column,
+            ).join(step_sq) \
+            .outerjoin(rate_sq) \
+            .join(Recipe.ingredients) \
+            .join(RecipeIngredientAssociation.ingredient) \
+            .options(
+                contains_eager(Recipe.ingredients)
+                .contains_eager(RecipeIngredientAssociation.ingredient)
+                .load_only(Ingredient.name)
+            )
+        ),
+        total_duration_column,
+        rating_column,
+        order,
     )
 
 

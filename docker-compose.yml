@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    command:
+      - sh
+      - -c
+      - |
+        alembic upgrade head
+        python populate_db.py
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - .:/src
+    ports:
+      - 8000:8000
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    restart: always
+  db:
+    image: postgres:15-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    expose:
+      - 5432
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 50
+
+volumes:
+  postgres_data:

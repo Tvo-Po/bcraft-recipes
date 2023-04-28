@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import Literal, TypeAlias
 from uuid import UUID
 
 from pydantic import BaseModel, Field, validator
@@ -119,3 +120,7 @@ class FullRecipeData(BaseModel):
 
 class RateData(BaseModel):
     rate: int = Field(ge=1, le=5)
+
+
+RecipeListOrder: TypeAlias = Literal['duration'] | Literal['-duration'] \
+                           | Literal['rating'] | Literal['-rating']

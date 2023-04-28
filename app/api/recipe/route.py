@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import Literal
 
 from fastapi import Depends, status, Query
 from fastapi.routing import APIRouter
@@ -11,6 +12,7 @@ from .schema import (
     FullRecipeData,
     RateData,
     RecipeEntityResponse,
+    RecipeListOrder,
     RecipeListResponse,
 )
 from app.api.auth.dependency import get_authenticated_user
@@ -35,6 +37,7 @@ async def get_recipe_list(
     rating__lte: float | None = Query(default=None),
     rating__gte: float | None = Query(default=None),
     ingredients: set[str] | None = Query(default=None),
+    order: RecipeListOrder | None = Query(default=None),
     session: AsyncSession = Depends(get_session),
 ):
     return await paginate(
@@ -44,7 +47,8 @@ async def get_recipe_list(
             duration__gte,
             rating__lte,
             rating__gte,
-            ingredients,    
+            ingredients,
+            order,
         ),
     )
 
