@@ -1,0 +1,16 @@
+.vscode/
+
+__pycache__/
+
+.git/
+.mypy_cache/
+.pytest_cache/
+
+tests/
+.coverage
+.gitignore
+.pre-commit-config.yaml
+docker-compose.yaml
+Dockerfile
+README.md
+specification.md
